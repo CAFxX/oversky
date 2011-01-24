@@ -1,0 +1,48 @@
+<?php
+
+require_once 'oversky.database.phpi';
+require_once 'oversky.constants.phpi';
+require_once 'oversky.exception.phpi';
+
+class stats {
+  static private function getDatabase() {
+    if (!$db = database::getInstance())
+      throw new DatabaseError();
+    return $db;
+  }
+  
+  static private function getScalarResult($sql) {
+    return self::getDatabase()->execute($sql)->fetchColumn();
+  }
+  
+  static function getLocalFilesSize() {
+    return 0; // TODO
+  }
+
+  static function getLocalFilesCount() {
+    $table = OverSkyConfiguration::PDOTablePrefix . '_localstore';
+    return self::getScalarResult("SELECT COUNT(hash) FROM $table");
+  }
+  
+  static function getTrackedFilesSize() {
+    return 0; // TODO
+  }
+  
+  static function getTrackedFilesCount() {
+    $table = OverSkyConfiguration::PDOTablePrefix . '_remotestore';
+    return self::getScalarResult("SELECT COUNT(DISTINCT hash) FROM $table");
+  }
+  
+  static function getKnownHostsCount() {
+    $table = OverSkyConfiguration::PDOTablePrefix . '_hosts';
+    return self::getScalarResult("SELECT COUNT(DISTINCT host) FROM $table");
+  }
+  
+  static function getRequestsCountLastDay() {
+    $table = OverSkyConfiguration::PDOTablePrefix . '_requestslog';
+    return self::getScalarResult("SELECT COUNT(*) FROM $table WHERE ((timestamp > NOW()-24*60*60) AND (location IS NOT NULL))");
+  }
+}
+
+
+?>

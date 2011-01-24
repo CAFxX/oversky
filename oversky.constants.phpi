@@ -1,0 +1,32 @@
+<?php
+
+require 'oversky.configuration.phpi';  
+require 'oversky.exception.phpi';
+  
+      /////////////////////////////////////////////
+      //                                         //
+      //     DO NOT MODIFY THESE CONSTANTS !     //
+      //   doing so will prevent this instance   //
+      //   from connecting to the oversky DHT    //
+      //                                         //
+      /////////////////////////////////////////////
+
+class OverSkyConfiguration extends OverSkyHostConfiguration {
+  const Version           = 0;
+  const HashAlgorithm     = 'sha256';
+  const HashSize          = 256; // bits
+  const LocationSizeMax   = 256; // characters
+  const HTTPHeaderVersion = 'X-OVERSKY-VERSION';
+  const HTTPHeaderHost    = 'X-OVERSKY-HOST-NAME';
+  const HTTPHeaderHostID  = 'X-OVERSKY-HOST-ID';
+  
+  static private $HostID = null;
+  
+  static function HostID() {
+    if (self::$HostID == null)
+      self::$HostID = @file_get_contents(OverSkyConfiguration::WorkingDirectoryPrivate.'/HostID');
+    return self::$HostID;
+  }
+}
+
+?>

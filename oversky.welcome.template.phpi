@@ -1,0 +1,93 @@
+<?php require_once 'oversky.stats.phpi'; ?>
+<html>
+  <head>
+    <title>oversky - Welcome!</title>
+    <style type="text/css">
+      body, html {
+        margin:0;
+        padding:0;
+        background:#9CF;
+        background-image: -moz-linear-gradient(90deg, 
+          #f9f6eb 0%,
+          #f1f7f7 10%,
+          #a4c9de 20%,
+          #3792b4 35%,
+          #204b79 70%,
+          #193259 100%
+        );
+        background-image: -webkit-linear-gradient(90deg, 
+          #f9f6eb 0%,
+          #f1f7f7 10%,
+          #a4c9de 20%,
+          #3792b4 35%,
+          #204b79 70%,
+          #193259 100%
+        );
+        background-image: linear-gradient(90deg, 
+          #f9f6eb 0%,
+          #f1f7f7 10%,
+          #a4c9de 20%,
+          #3792b4 35%,
+          #204b79 70%,
+          #193259 100%
+        );
+        color:white;
+        font-family:"Trebuchet MS", Trebuchet, arial, sans-serif;
+        height:100%;
+      }
+      body > div {
+        margin:auto;
+        width:640px;
+        padding-top:80px;
+      }
+      h1, h2 { 
+        display:inline;
+        margin-right:10px;
+      }
+      hr {
+        border:1px solid white;
+      }
+      a, a:active, a:link, a:visited, a:hover {
+        color:white;
+      }
+      .right {
+        text-align:right;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h1><em>oversky</em></h1>
+      <h2>the sky is not the limit</h2>
+      <p>
+        Welcome to the <em>oversky</em> instance running on <?= $_SERVER['SERVER_NAME'] ?>.
+      </p>
+      <p>
+        <em>oversky</em> is a <abbr title="Distributed Hash Table">DHT</abbr> built in PHP 
+        meant to be used as a decentralized <abbr title="HyperText Transfer Protocol">HTTP</abbr> 
+        <abbr title="Content Delivery Network">CDN</abbr>. For more info have a look at the 
+        <a href="#">documentation</a>.
+      </p>
+      <p>
+        To bootstrap a new <em>oversky</em> instance visit its administrative interface and 
+        enter the URL of this page in the "Bootstrap" field.
+      <hr>
+      <p>
+        This <em>oversky</em> instance runs revision <?= OverSkyConfiguration::Version ?>, 
+        is currently using <?= round(stats::getLocalFilesSize(),2) ?>GB 
+        out of <?= round(OverSkyConfiguration::Quota/pow(2,30),2) ?>GB 
+        for <?= stats::getLocalFilesCount() ?> files 
+        and tracking <?= round(stats::getTrackedFilesSize(),2) ?>GB 
+        in <?= stats::getTrackedFilesCount() ?> files 
+        on <?= stats::getKnownHostsCount() ?> hosts. 
+        In the last day, this instance served <?= stats::getRequestsCountLastDay() ?> requests with an 
+        average estimated load of <?= round(0,2) ?>KB/s.
+      </p>
+      <hr>
+      <p class="right">
+        <em>oversky</em> created by <a href="http://cafxx.strayorange.com">Carlo Alberto Ferraris</a>.<br>
+        Source code available under the terms of the GPLv3.
+      </p>
+    </div>
+  </body>
+</html>

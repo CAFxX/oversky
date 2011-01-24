@@ -1,0 +1,69 @@
+<?php
+
+require_once 'oversky.database.phpi';
+require_once 'oversky.constants.phpi';
+
+class localStore {
+  static private $singleton;
+  private $database;
+  
+  private function __construct() {
+    $this->database = database::getInstance();
+  }
+  
+  static function getInstance() {
+    if (!self::$singleton)
+      self::$singleton = new localStore();
+    return self::$singleton;
+  }
+  
+  static function get_($key) {
+    return self::getInstance()->get($key);
+  }
+  
+  static function put_($key, $location) {
+    return self::getInstance()->put($key, $location);
+  }
+  
+  static function putFile_($location) {
+    return self::getInstance()->putFile($location);
+  }
+  
+  function get($key) {
+    if (!$this->database)
+      throw new DatabaseUnavailable();
+
+    $prefix = OverSkyConfiguration::PDOTablePrefix;
+    $res = $this->database->execute("SELECT location FROM ${prefix}_localstore WHERE hash = UNHEX( ? ) LIMIT 1", array( $key ));
+    if (!$res) 
+      throw new DatabaseError();
+      
+    switch( $res->rowCount() ) {
+      case 0: return false;
+      case 1: return OverSkyConfiguration::WorkingDirectoryPublicURL.'/'.$res->fetchColumn();
+      default: throw new DatabaseError();
+    }
+  }
+  
+  function put($key, $location) {
+    if (!$this->database)
+      throw new DatabaseUnavailable();
+
+    $prefix = OverSkyConfiguration::PDOTablePrefix;
+    $res = $this->database->execute("REPLACE INTO ${prefix}_localstore (hash, location) VALUES ( UNHEX( ? ), ? )", array( $key, $location ));
+    if (!$res) 
+      throw new DatabaseError();
+  }
+  
+  function putFile($location) {
+    $hash = overskyHashFile($location);
+    if ($this->get($hash))
+      return false;
+    copy($location, OverSkyConfiguration::WorkingDirectoryPrivate.'/'.$hash);
+    link(OverSkyConfiguration::WorkingDirectoryPrivate.'/'.$hash, OverSkyConfiguration::WorkingDirectoryPublic.'/'.$hash);
+    $this->put($hash, $hash);
+    return $hash;
+  }
+}
+
+?>

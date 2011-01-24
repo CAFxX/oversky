@@ -1,0 +1,49 @@
+<?php
+  $class_parents = $e->remote ? $e->getRemoteClassParents() : class_parents($e);
+  $class         = $e->remote ? $e->getRemoteClass()        : get_class($e);
+  $trace         = $e->remote ? $e->getRemoteTrace()        : $e->getTrace();
+  $remote        = $e->remote ? '[REMOTE]'                  : '';
+?>
+<html>
+  <head>
+    <title>OverSky - Exception caught</title>
+    <style type="text/css">
+      body > div {
+        margin-top:20px;
+        padding-top:10px;
+        border-top:1px solid black;
+      }
+      pre, table.pre {
+        font-family:Consolas, "Courier New", Courier, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1><em>oversky</em> exception</h1>
+    <div>
+      <?= implode(' > ', array_reverse($class_parents)) ?> > <?= $class ?> (<?= $e->getCode() ?>) <?= $remote ?><br>
+      <?= $e->getMessage() ?>
+    </div>
+    <div>
+      <?= $file = $e->getFile() ?>, <?= $line = $e->getLine() ?>
+      <div><pre><?
+        $src = file_get_contents($file); 
+        $lines = explode("\n", $src);
+        $context = 5;
+        for ($i=max(1, $line-$context); $i<=min(count($lines), $line+$context); $i++) 
+          echo sprintf("%s%5d %s%s", $i==$line?'<b>':'', $i, htmlentities($lines[$i-1]), $i==$line?'</b>':'');
+      ?></pre></div>
+    </div>
+    <div>
+      Stack trace
+      <table class="pre">
+        <tr><td>Frame</td><td>File</td><td>Line</td><td>Callee</td><td>Arguments</td></tr>
+        <?
+          foreach ($trace as $i => $f)
+            echo sprintf('<tr><td>%d</td><td>%s</td><td>%d</td><td>%s</td><td>%s</td></tr>', 
+              $i, $f['file'], $f['line'], $f['function'], implode('<br>', $f['args'] ? $f['args'] : array() ));
+        ?>
+      </table>
+    </div>
+  </body>
+</html>

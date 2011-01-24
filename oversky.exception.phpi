@@ -1,0 +1,67 @@
+<?php
+
+class OverSkyException extends Exception { const HTTPStatusCode=500; }
+  class ServerError extends OverSkyException {}
+    class ConfigurationError extends ServerError {}
+      class UnsupportedHashAlgorithm extends ConfigurationError {}
+      class IncorrectHashSize extends ConfigurationError {}
+    class DatabaseError extends ServerError {}
+      class DatabaseUnavailable extends DatabaseError {}
+      class DatabaseTableCreationFailed extends DatabaseError {}
+    class UnimplementedAction extends ServerError { const HTTPStatusCode=501; }
+  class BadRequest extends OverSkyException { const HTTPStatusCode=400; }
+    class MalformedRequest extends BadRequest {}
+      class InvalidAction extends MalformedRequest {}
+      class MissingKey extends MalformedRequest {}
+      class InvalidKey extends MalformedRequest {}
+      class MissingLocation extends MalformedRequest {}
+      class InvalidLocation extends MalformedRequest {}
+      class MissingHostID extends MalformedRequest {}
+      class InvalidHostID extends MalformedRequest {}
+      class MissingHost extends MalformedRequest {}
+      class InvalidHost extends MalformedRequest {} // FIXME
+    class UnauthorizedRequest extends BadRequest { const HTTPStatusCode=401; } // FIXME
+    class UnknownKey extends BadRequest { const HTTPStatusCode=404; }
+    class FailedHostDiscovery extends BadRequest { const HTTPStatusCode=404; } // FIXME
+    class InvalidThirdPartyPut extends BadRequest { const HTTPStatusCode=403; } // FIXME
+  class RemoteException extends OverSkyException { 
+    private $remote = true;
+    private $trace;
+    private $parents = array();
+    private $name;
+    
+    function __construct($headers) { 
+      $this->message = $headers['EXCEPTION-MESSAGE'];
+      $this->code = $headers['EXCEPTION-CODE'];
+      $this->file = $headers['EXCEPTION-FILE'];
+      $this->line = $headers['EXCEPTION-LINE'];
+      $this->trace = unserialize($headers['EXCEPTION-TRACE']);
+      $refl = ReflectionClass($headers['EXCEPTION']);
+      $this->name = $refl->getName();
+      while ($refl = $refl->getParentClass())
+        $this->parents[] = $refl->getName();
+    }
+    function getRemoteTrace() { return $this->trace; }
+    function getRemoteClass() { return $this->name; }
+    function getRemoteClassParents() { return $this->parents; }
+  }
+    
+function exception_error_handler($errno, $errstr, $errfile, $errline ) {
+    throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+}
+
+function handleException($e) {
+  header('HTTP/1.x '. ($e->HTTPStatusCode ? $e->HTTPStatusCode : 500) );
+  if (OverSkyConfiguration::DebugEnabled) {
+    $class         = $e->remote ? $e->getRemoteClass()        : get_class($e);
+    $trace         = $e->remote ? $e->getRemoteTrace()        : $e->getTrace();
+    header('Exception: '.$class);
+    header('Exception-File: '.$e->getFile());
+    header('Exception-Line: '.$e->getLine());
+    header('Exception-Code: '.$e->getCode());
+    header('Exception-Message: '.$e->getMessage());
+    header('Exception-Trace: '.serialize($trace));
+    require 'oversky.exception.template.phpi';
+  }
+}
+?>

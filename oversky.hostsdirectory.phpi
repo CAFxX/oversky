@@ -1,0 +1,81 @@
+<?php
+
+require_once 'oversky.database.phpi';
+require_once 'oversky.constants.phpi';
+
+class hostsDirectory {
+  static private $singleton;
+  private $database;
+  
+  private function __construct() {
+    $this->database = database::getInstance();
+  }
+  
+  static function getInstance() {
+    if (!self::$singleton)
+      self::$singleton = new hostsDirectory();
+    return self::$singleton;
+  }
+  
+  static function get_($key) {
+    return self::getInstance()->get($key);
+  }
+  
+  static function put_($host, $host_id) {
+    return self::getInstance()->put($host, $host_id);
+  }
+  
+  static function push_($key, $location) {
+    return self::getInstance()->push($key, $location);
+  }
+  
+  private function getNearestHosts($key, $limit=false) {
+    if (!$this->database)
+      throw new DatabaseUnavailable();
+    
+    if ($limit && $limit > 0)
+      $limit = "LIMIT $limit";
+    $prefix = OverSkyConfiguration::PDOTablePrefix;
+    $res = $this->database->execute("SELECT host, hostid FROM ${prefix}_hosts ORDER BY ${prefix}_hammingdistance(hostid, UNHEX(?)) ASC $limit", array( $key ));
+    if (!$res) 
+      throw new DatabaseError();
+      
+    return $res;
+  }
+  
+  function get($key) {
+    $res = $this->getNearestHosts($key, 10);
+      
+    while ($host = $res->fetch(PDO::FETCH_ASSOC)) {
+      $response = overskyHTTPRequest($host['host']."?action=get&key=$key");
+      $location = $response['headers']['location'];
+      if ($location && isValidLocationString($location)) {
+        remoteStore::put_($key, $location);
+        return $location;
+      }
+    }
+    
+    return false;
+  }
+  
+  function put($host, $host_id) {
+    if (!$this->database)
+      throw new DatabaseUnavailable();
+    
+    $prefix = OverSkyConfiguration::PDOTablePrefix;
+    $res = $this->database->execute("REPLACE INTO ${prefix}_hosts (host, hostid) VALUES ( ?, UNHEX(?) )", array( $host, $host_id ));
+    if (!$res) 
+      throw new DatabaseError();
+  }
+  
+  function push($key, $location) {
+    $res = $this->getNearestHosts($key, 4);
+    
+    while ($host = $res->fetch(PDO::FETCH_ASSOC)) {
+      $response = overskyHTTPRequest($host['host']."?action=put&key=$key&location=$location"); // FIXME
+      print_r($response);
+    }
+  }
+}
+
+?>

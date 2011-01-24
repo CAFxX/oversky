@@ -1,0 +1,35 @@
+<?php
+
+require_once 'oversky.database.phpi';
+require_once 'oversky.constants.phpi';
+
+class requestsLog {
+  static private $singleton;
+  private $database;
+  
+  private function __construct() {
+    $this->database = database::getInstance();
+  }
+  
+  static function getInstance() {
+    if (!self::$singleton)
+      self::$singleton = new requestsLog();
+    return self::$singleton;
+  }
+  
+  static function log_($ip, $key, $location) {
+    return self::getInstance()->log($ip, $key, $location);
+  }
+  
+  function log($ip, $key, $location) {
+    if (!$this->database)
+      throw new DatabaseUnavailable();
+
+    $prefix = OverSkyConfiguration::PDOTablePrefix;
+    $res = $this->database->execute("INSERT INTO ${prefix}_requestslog (ip, hash, location) VALUES ( UNHEX( ? ), UNHEX( ? ), ? )", array( $ip, $key, $location ));
+    if (!$res) 
+      throw new DatabaseError();    
+  }
+}
+
+?>

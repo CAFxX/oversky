@@ -1,0 +1,123 @@
+<?php
+
+require_once 'oversky.constants.phpi';
+
+function overskyHash($data, $raw=false) {
+  return hash(OverSkyConfiguration::HashAlgorithm, $data, $raw);
+}
+
+function overskyHashFile($filename, $raw=false) {
+  return hash_file(OverSkyConfiguration::HashAlgorithm, $filename, $raw);
+}
+
+function overskyHashDistance($hash1, $hash2) {
+  isValidHashHexString($hash1);
+  isValidHashHexString($hash2);
+  return gmp_hamdist(gmp_init($hash1, 16), gmp_init($hash2, 16));
+}
+
+function isValidHashHexString($hash) {
+  if (preg_match('/[^0-9a-fA-F]/', $hash))
+    return false; 
+  if (strlen($hash) != OverSkyConfiguration::HashSize/8*2)
+    return false;
+  return true;
+}
+
+function isValidLocationString($location) {
+  $headers = get_headers($location, true);
+  if (!$headers)
+    return false;
+  if (!preg_match('/HTTP\/1\.[01] [23][0-9]{2}/', $headers[0]))
+    return false;
+  return true;
+}
+
+function getIPv6($ip, $binary=false) {
+  $ipv6 = inet_pton($ip);
+  if (!$ipv6)
+    return false;
+  if (strlen($ipv6)==4)
+    $ipv6 = inet_pton("::ffff:$ip");
+  return $binary ? $ipv6 : bin2hex($ipv6);
+}
+
+function getOverskyHostID($location) {
+  $response = overskyHTTPRequest($location, true); //print_r($response);
+  $headers = $response['headers'];
+  if (!$headers)
+    return false;
+  if ($headers[strtolower(OverSkyConfiguration::HTTPHeaderVersion)] != OverSkyConfiguration::Version)
+    return false;
+  if (!isValidHashHexString($headers[strtolower(OverSkyConfiguration::HTTPHeaderHostID)]))
+    return false;
+  return $headers[strtolower(OverSkyConfiguration::HTTPHeaderHostID)];
+}
+
+function getRequestHeaders() {
+  $headers = array();
+  foreach ($_SERVER as $key => $value)
+    if ( preg_match('/HTTP_(.*)/', $key, $matches ) )
+      $headers[strtr($matches[1], '_', '-')] = $value;
+  return $headers;
+}
+
+function overskyHTTPRequest($location, $headOnly=false, $passthru=false) {
+  $c = curl_init();
+  curl_setopt($c, CURLOPT_RETURNTRANSFER, !$passthru);
+  curl_setopt($c, CURLOPT_URL, $location);
+  curl_setopt($c, CURLOPT_HTTPHEADER, array(
+    OverSkyConfiguration::HTTPHeaderVersion .': '.OverSkyConfiguration::Version,
+    OverSkyConfiguration::HTTPHeaderHost .': '.OverSkyConfiguration::HostName,
+    OverSkyConfiguration::HTTPHeaderHostID .': '.OverSkyConfiguration::HostID()
+  ) );
+  curl_setopt($c, CURLOPT_NOBODY, $headOnly);
+  curl_setopt($c, CURLOPT_HEADER, !$passthru);
+  curl_setopt($c, CURLOPT_FOLLOWLOCATION, false);
+  curl_setopt($c, $headOnly ? CURLOPT_TIMEOUT_MS : CURLOPT_CONNECTTIMEOUT_MS, OverSkyConfiguration::RequestTimeout);
+    
+  $response = curl_exec($c); 
+  $info = curl_getinfo($c);
+  if ($response) {
+    $result = true;
+    if (!$passthru) {
+      $response = parseHTTPResponse($response); 
+      $body = $response['body'];
+      $headers = $response['headers']; 
+    } else {
+      $body = $result;
+      $headers = false;
+    }
+  } else {
+    $result = false;
+    $headers = false;
+    $body = false;
+  }
+  curl_close($c);
+  
+  if ($headers && $headers['exception']) {
+    throw new RemoteException($headers);
+  }
+  
+  return array( 
+    "result" => $result, 
+    "headers" => $headers, 
+    "body" => $body, 
+    "info" => $info 
+  );
+}
+
+function parseHTTPResponse($response) {
+  $response = preg_split('/\r\n\r\n/', $response, 2); 
+  $headers_raw = explode("\r\n", $response[0]);
+  $headers = array();
+  foreach ($headers_raw as $i => $header) {
+    if ($i==0) {
+      $headers[0] = $header;
+    } else {
+      $header_exploded = explode(': ', $header);
+      $headers[strtolower($header_exploded[0])] = $header_exploded[1];
+    }
+  }
+  return array('headers' => $headers, 'body' => $response[1]);
+}

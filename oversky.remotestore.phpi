@@ -1,0 +1,54 @@
+<?php
+
+require_once 'oversky.database.phpi';
+require_once 'oversky.constants.phpi';
+
+class remoteStore {
+  static private $singleton;
+  private $database;
+  
+  private function __construct() {
+    $this->database = database::getInstance();
+  }
+  
+  static function getInstance() {
+    if (!self::$singleton)
+      self::$singleton = new remoteStore();
+    return self::$singleton;
+  }
+
+  static function get_($key) {
+    return self::getInstance()->get($key);
+  }
+  
+  static function put_($key, $location) {
+    return self::getInstance()->put($key, $location);
+  }
+   
+  function get($key) {
+    if (!$this->database)
+      throw new DatabaseUnavailable();
+    
+    $prefix = OverSkyConfiguration::PDOTablePrefix;
+    $res = $this->database->execute("SELECT location FROM ${prefix}_remotestore WHERE hash = UNHEX( ? ) ORDER BY RAND() LIMIT 1", array( $key ));
+    if (!$res) 
+      throw new DatabaseError();
+      
+    switch( $res->rowCount() ) {
+      case 0: return false;
+      default: return $res->fetchColumn(); // FIXME
+    }
+  }
+  
+  function put($key, $location) {
+    if (!$this->database)
+      throw new DatabaseUnavailable();
+    
+    $prefix = OverSkyConfiguration::PDOTablePrefix;
+    $res = $this->database->execute("INSERT INTO ${prefix}_remotestore (hash, location) VALUES ( UNHEX( ? ), ? )", array( $key, $location ));
+    if (!$res) 
+      throw new DatabaseError();
+  }
+}
+
+?>

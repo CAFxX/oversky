@@ -1,0 +1,62 @@
+<?php
+
+require_once 'oversky.constants.phpi';
+require_once 'oversky.exception.phpi';
+
+class database {
+  static private $singleton;
+  private $pdo;
+  private $stmts = array();
+  
+  private function __construct() {
+    $this->pdo = new PDO( OverSkyConfiguration::PDODSN, OverSkyConfiguration::PDOUser, OverSkyConfiguration::PDOPassword );
+    if (!$this->pdo)
+      throw new DatabaseUnavailable();
+    $this->pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
+  }
+  
+  static function getInstance() {
+    return $singleton ? $singleton : $singleton = new database();
+  }
+  
+  static function getTableName($table) {
+    return OverSkyConfiguration::PDOTablePrefix . '_' . $table;
+  }
+  
+  static function prepare_($statement) {
+    return self::getInstance()->prepare($statement);
+  }
+  
+  static function execute_($statement, $values=NULL) {
+    return self::getInstance()->execute($statement, $values);
+  }
+  
+  function prepare($statement) {
+    if (!$this->pdo)
+      throw new DatabaseUnavailable();
+
+    if (!$this->stmts[$statement])
+      $this->stmts[$statement] = $this->pdo->prepare($statement);
+       
+    if (!$this->stmts[$statement])
+      throw new DatabaseError();
+
+    return $this->stmts[$statement];
+  }
+  
+  function execute($statement, $values=NULL) {
+    if (!$this->pdo)
+      throw new DatabaseUnavailable();
+
+    $stmt = $this->prepare($statement);
+    if (!$stmt)
+      throw new DatabaseError();
+    
+    if (!$stmt->execute($values))
+      throw new DatabaseError();
+    
+    return $stmt;
+  }
+}
+
+?>

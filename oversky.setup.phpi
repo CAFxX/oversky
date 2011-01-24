@@ -1,0 +1,108 @@
+<?php
+ 
+require_once 'oversky.database.phpi';
+require_once 'oversky.constants.phpi';
+require_once 'oversky.exception.phpi';
+
+function setup() {
+  setup_verify_configuration();
+  setup_database();
+  setup_directories();
+  setup_verify_setup();
+}
+
+function setup_verify_configuration() {
+  // check the hash constants
+  $hash = @hash( OverSkyConfiguration::HashAlgorithm, '', true );
+  if (!$hash)
+    throw new UnsupportedHashAlgorithm();
+  if (strlen($hash) * 8 != OverSkyConfiguration::HashSize) 
+    throw new IncorrectHashSize();
+}
+
+function setup_directories() {
+  @mkdir(OverSkyConfiguration::WorkingDirectoryPrivate);
+  @mkdir(OverSkyConfiguration::WorkingDirectoryPublic);
+  
+  if (!is_dir(OverSkyConfiguration::WorkingDirectoryPrivate))
+    throw new ConfigurationError();
+  if (!is_dir(OverSkyConfiguration::WorkingDirectoryPublic))
+    throw new ConfigurationError();
+  
+  $host_id = bin2hex(mcrypt_create_iv(OverSkyConfiguration::HashSize/8));
+  if (!file_put_contents(OverSkyConfiguration::WorkingDirectoryPrivate.'/HostID', $host_id)) // FIXME
+    throw new ConfigurationError();
+  hostsDirectory::put_(OverSkyConfiguration::HostName, $host_id);
+}
+
+function setup_database() {
+  $prefix = OverSkyConfiguration::PDOTablePrefix;
+  $hashsize = OverSkyConfiguration::HashSize / 8;
+  $locationsize = OverSkyConfiguration::LocationSizeMax;
+
+  $db = database::getInstance();
+
+  $sql = "
+    DROP TABLE IF EXISTS ${prefix}_localstore;
+    CREATE TABLE ${prefix}_localstore (
+      hash BINARY($hashsize) NOT NULL,
+      location VARCHAR($locationsize) NOT NULL,
+      PRIMARY KEY (hash)
+    );
+    DROP TABLE IF EXISTS ${prefix}_remotestore;
+    CREATE TABLE ${prefix}_remotestore (
+      hash BINARY($hashsize) NOT NULL,
+      location VARCHAR($locationsize) NOT NULL,
+      lastcheck TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY hashlocation (hash, location),
+      KEY hash (hash),
+      KEY lastcheck (lastcheck)
+    );
+    DROP TABLE IF EXISTS ${prefix}_hosts;
+    CREATE TABLE ${prefix}_hosts (
+      host VARCHAR($locationsize) NOT NULL,
+      hostid BINARY($hashsize) NOT NULL,
+      lastcheck TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY host (host),
+      KEY hostid (hostid),
+      KEY lastcheck (lastcheck)
+    );
+    DROP TABLE IF EXISTS ${prefix}_requestslog;
+    CREATE TABLE ${prefix}_requestslog (
+      ip BINARY(16) NOT NULL,
+      timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      hash BINARY($hashsize) NOT NULL,
+      location VARCHAR($locationsize) NULL,
+      KEY hash (hash), 
+      KEY timestamp (timestamp)
+    );
+    DROP FUNCTION IF EXISTS ${prefix}_hammingdistance;
+    CREATE FUNCTION ${prefix}_hammingdistance(A BINARY(32), B BINARY(32))
+    RETURNS INT DETERMINISTIC
+    RETURN 
+      BIT_COUNT(
+        CONV(HEX(SUBSTRING(A, 1,  8)), 16, 10) ^ 
+        CONV(HEX(SUBSTRING(B, 1,  8)), 16, 10)
+      ) +
+      BIT_COUNT(
+        CONV(HEX(SUBSTRING(A, 9,  8)), 16, 10) ^ 
+        CONV(HEX(SUBSTRING(B, 9,  8)), 16, 10)
+      ) +
+      BIT_COUNT(
+        CONV(HEX(SUBSTRING(A, 17, 8)), 16, 10) ^ 
+        CONV(HEX(SUBSTRING(B, 17, 8)), 16, 10)
+      ) +
+      BIT_COUNT(
+        CONV(HEX(SUBSTRING(A, 25, 8)), 16, 10) ^ 
+        CONV(HEX(SUBSTRING(B, 25, 8)), 16, 10)
+      );
+  ";
+  if (!$db->execute($sql))
+    throw new DatabaseError();
+}
+
+function setup_verify_setup() {
+  // TODO
+}
+
+?>
