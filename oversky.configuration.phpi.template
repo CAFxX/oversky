@@ -1,0 +1,19 @@
+<?php
+
+class OverSkyHostConfiguration {
+  const PDODSN                    = ""; // see the PDO documentation on PHP.net for instructions on PDO DSNs
+  const PDOUser                   = ""; // the username used to connect to the PDO data source
+  const PDOPassword               = ""; // the password used to connect to the PDO data source
+  const PDOTablePrefix            = "oversky"; // table prefix used in the database
+  const HostName                  = "";
+  const WorkingDirectoryPrivate   = "private"; // working private directory (should NOT be HTTP-accessible)
+  const WorkingDirectoryPublic    = "public"; // working public directory (should be HTTP-accessible)
+  const WorkingDirectoryPublicURL = ""; // URL of the working public directory (tip: map the directory to a cookieless domain)
+  const AdministratorUser         = ""; // username used to access the administrative interface
+  const AdministratirPassword     = ""; // password used to access the administrative interface
+  const Quota                     = 1000000000; // maximum size of the working public directory
+  const DebugEnabled              = true; // upon exception should we print out debugging info? should be set to false in production!
+  const RequestTimeout            = 2500; // timeout in ms for HEAD requests, connection timeout in ms for other requests
+}
+
+?>
