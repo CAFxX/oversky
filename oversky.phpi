@@ -112,8 +112,8 @@ function handleDiscoverHostRequest() {
   if (!$host = $_REQUEST['host'])
     throw new BadRequest();
   
-  if (!$host_id = getOverskyHostID($host))
-    throw new FailedHostDiscovery();
+  if (!$host_id = getOverskyHostID($host)) 
+    throw new FailedHostDiscovery($host_id);
   
   hostsDirectory::put_($host, $host_id);
   
@@ -123,19 +123,14 @@ function handleDiscoverHostRequest() {
 function handleRegisterRequest() {
   if (!$location = $_REQUEST['location'])
     throw new MissingLocation();
-    
-  if ((is_file($location) && is_readable($location)) || isValidLocationString($location)) {
+  
+  if (/*(is_file($location) && is_readable($location)) ||*/ isValidLocationString($location)) {
     $key = localStore::putFile_($location); 
-    if ($key) {
-      $location = localStore::get_($key); 
-      hostsDirectory::push_($key, $location);
-    }
+    $location = localStore::get_($key); 
+    hostsDirectory::push_($key, $location);
   } elseif (isValidHashHexString($location)) {
-
     //$location = getLocationForKey($location);
     throw new ServerError(); // TODO
-  
-    
   } else {
     throw new InvalidLocation();
   }

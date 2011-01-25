@@ -26,13 +26,8 @@ class remoteStore {
   }
    
   function get($key) {
-    if (!$this->database)
-      throw new DatabaseUnavailable();
-    
     $prefix = OverSkyConfiguration::PDOTablePrefix;
     $res = $this->database->execute("SELECT location FROM ${prefix}_remotestore WHERE hash = UNHEX( ? ) ORDER BY RAND() LIMIT 1", array( $key ));
-    if (!$res) 
-      throw new DatabaseError();
       
     switch( $res->rowCount() ) {
       case 0: return false;
@@ -41,13 +36,8 @@ class remoteStore {
   }
   
   function put($key, $location) {
-    if (!$this->database)
-      throw new DatabaseUnavailable();
-    
     $prefix = OverSkyConfiguration::PDOTablePrefix;
-    $res = $this->database->execute("INSERT INTO ${prefix}_remotestore (hash, location) VALUES ( UNHEX( ? ), ? )", array( $key, $location ));
-    if (!$res) 
-      throw new DatabaseError();
+    $this->database->execute("REPLACE INTO ${prefix}_remotestore (hash, location) VALUES ( UNHEX( ? ), ? )", array( $key, $location ));
   }
 }
 

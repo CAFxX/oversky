@@ -1,8 +1,8 @@
 <?php
-  $class_parents = $e->remote ? $e->getRemoteClassParents() : class_parents($e);
-  $class         = $e->remote ? $e->getRemoteClass()        : get_class($e);
-  $trace         = $e->remote ? $e->getRemoteTrace()        : $e->getTrace();
-  $remote        = $e->remote ? '[REMOTE]'                  : '';
+  $class_parents = get_class($e) == 'RemoteException' ? $e->getRemoteClassParents() : class_parents($e);
+  $class         = get_class($e) == 'RemoteException' ? $e->getRemoteClass()        : get_class($e);
+  $trace         = get_class($e) == 'RemoteException' ? $e->getRemoteTrace()        : $e->getTrace();
+  $remote        = get_class($e) == 'RemoteException' ? '[REMOTE]'                  : '';
 ?>
 <html>
   <head>

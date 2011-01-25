@@ -31,12 +31,12 @@ class OverSkyException extends Exception { const HTTPStatusCode=500; }
     private $name;
     
     function __construct($headers) { 
-      $this->message = $headers['EXCEPTION-MESSAGE'];
-      $this->code = $headers['EXCEPTION-CODE'];
-      $this->file = $headers['EXCEPTION-FILE'];
-      $this->line = $headers['EXCEPTION-LINE'];
-      $this->trace = unserialize($headers['EXCEPTION-TRACE']);
-      $refl = ReflectionClass($headers['EXCEPTION']);
+      $this->message = $headers['exception-message'];
+      $this->code = $headers['exception-code'];
+      $this->file = $headers['exception-file'];
+      $this->line = $headers['exception-line'];
+      $this->trace = unserialize($headers['exception-trace']);
+      $refl = new ReflectionClass($headers['exception']);
       $this->name = $refl->getName();
       while ($refl = $refl->getParentClass())
         $this->parents[] = $refl->getName();
@@ -53,8 +53,8 @@ function exception_error_handler($errno, $errstr, $errfile, $errline ) {
 function handleException($e) {
   header('HTTP/1.x '. ($e->HTTPStatusCode ? $e->HTTPStatusCode : 500) );
   if (OverSkyConfiguration::DebugEnabled) {
-    $class         = $e->remote ? $e->getRemoteClass()        : get_class($e);
-    $trace         = $e->remote ? $e->getRemoteTrace()        : $e->getTrace();
+    $class = get_class($e) == 'RemoteException' ? $e->getRemoteClass() : get_class($e);
+    $trace = get_class($e) == 'RemoteException' ? $e->getRemoteTrace() : $e->getTrace();
     header('Exception: '.$class);
     header('Exception-File: '.$e->getFile());
     header('Exception-Line: '.$e->getLine());

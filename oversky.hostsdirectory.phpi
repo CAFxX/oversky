@@ -30,15 +30,17 @@ class hostsDirectory {
   }
   
   private function getNearestHosts($key, $limit=false) {
-    if (!$this->database)
-      throw new DatabaseUnavailable();
-    
     if ($limit && $limit > 0)
       $limit = "LIMIT $limit";
     $prefix = OverSkyConfiguration::PDOTablePrefix;
-    $res = $this->database->execute("SELECT host, hostid FROM ${prefix}_hosts ORDER BY ${prefix}_hammingdistance(hostid, UNHEX(?)) ASC $limit", array( $key ));
-    if (!$res) 
-      throw new DatabaseError();
+    $res = $this->database->execute(
+      "SELECT host, hostid 
+        FROM ${prefix}_hosts 
+        WHERE hostid <> UNHEX(?)
+        ORDER BY ${prefix}_hammingdistance(hostid, UNHEX(?)) ASC 
+        $limit", 
+        array( OverSkyConfiguration::HostID(), $key )
+    );
       
     return $res;
   }
@@ -59,21 +61,15 @@ class hostsDirectory {
   }
   
   function put($host, $host_id) {
-    if (!$this->database)
-      throw new DatabaseUnavailable();
-    
     $prefix = OverSkyConfiguration::PDOTablePrefix;
-    $res = $this->database->execute("REPLACE INTO ${prefix}_hosts (host, hostid) VALUES ( ?, UNHEX(?) )", array( $host, $host_id ));
-    if (!$res) 
-      throw new DatabaseError();
+    $this->database->execute("REPLACE INTO ${prefix}_hosts (host, hostid) VALUES ( ?, UNHEX(?) )", array( $host, $host_id ));
   }
   
   function push($key, $location) {
-    $res = $this->getNearestHosts($key, 4);
+    $res = $this->getNearestHosts($key, 8);
     
     while ($host = $res->fetch(PDO::FETCH_ASSOC)) {
       $response = overskyHTTPRequest($host['host']."?action=put&key=$key&location=$location"); // FIXME
-      print_r($response);
     }
   }
 }

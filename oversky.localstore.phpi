@@ -30,13 +30,8 @@ class localStore {
   }
   
   function get($key) {
-    if (!$this->database)
-      throw new DatabaseUnavailable();
-
     $prefix = OverSkyConfiguration::PDOTablePrefix;
     $res = $this->database->execute("SELECT location FROM ${prefix}_localstore WHERE hash = UNHEX( ? ) LIMIT 1", array( $key ));
-    if (!$res) 
-      throw new DatabaseError();
       
     switch( $res->rowCount() ) {
       case 0: return false;
@@ -46,22 +41,17 @@ class localStore {
   }
   
   function put($key, $location) {
-    if (!$this->database)
-      throw new DatabaseUnavailable();
-
     $prefix = OverSkyConfiguration::PDOTablePrefix;
-    $res = $this->database->execute("REPLACE INTO ${prefix}_localstore (hash, location) VALUES ( UNHEX( ? ), ? )", array( $key, $location ));
-    if (!$res) 
-      throw new DatabaseError();
+    $this->database->execute("REPLACE INTO ${prefix}_localstore (hash, location) VALUES ( UNHEX( ? ), ? )", array( $key, $location ));
   }
   
   function putFile($location) {
     $hash = overskyHashFile($location);
-    if ($this->get($hash))
-      return false;
-    copy($location, OverSkyConfiguration::WorkingDirectoryPrivate.'/'.$hash);
-    link(OverSkyConfiguration::WorkingDirectoryPrivate.'/'.$hash, OverSkyConfiguration::WorkingDirectoryPublic.'/'.$hash);
-    $this->put($hash, $hash);
+    if (!$this->get($hash)) {
+      copy($location, OverSkyConfiguration::WorkingDirectoryPrivate.'/'.$hash);
+      @link(OverSkyConfiguration::WorkingDirectoryPrivate.'/'.$hash, OverSkyConfiguration::WorkingDirectoryPublic.'/'.$hash);
+      $this->put($hash, $hash);
+    }
     return $hash;
   }
 }

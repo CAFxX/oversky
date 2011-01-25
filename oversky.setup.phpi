@@ -52,17 +52,17 @@ function setup_database() {
     DROP TABLE IF EXISTS ${prefix}_remotestore;
     CREATE TABLE ${prefix}_remotestore (
       hash BINARY($hashsize) NOT NULL,
-      location VARCHAR($locationsize) NOT NULL,
       lastcheck TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      location VARCHAR($locationsize) NOT NULL,
       UNIQUE KEY hashlocation (hash, location),
       KEY hash (hash),
       KEY lastcheck (lastcheck)
     );
     DROP TABLE IF EXISTS ${prefix}_hosts;
     CREATE TABLE ${prefix}_hosts (
-      host VARCHAR($locationsize) NOT NULL,
       hostid BINARY($hashsize) NOT NULL,
       lastcheck TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      host VARCHAR($locationsize) NOT NULL,
       UNIQUE KEY host (host),
       KEY hostid (hostid),
       KEY lastcheck (lastcheck)

@@ -25,10 +25,10 @@ function isValidHashHexString($hash) {
 }
 
 function isValidLocationString($location) {
-  $headers = get_headers($location, true);
-  if (!$headers)
+  $response = overskyHTTPRequest($location, true);
+  if ($response['result'] == false)
     return false;
-  if (!preg_match('/HTTP\/1\.[01] [23][0-9]{2}/', $headers[0]))
+  if (!preg_match('/HTTP\/1\.[01] [23][0-9]{2}/', $response['headers'][0]))
     return false;
   return true;
 }
@@ -46,7 +46,7 @@ function getOverskyHostID($location) {
   $response = overskyHTTPRequest($location, true); //print_r($response);
   $headers = $response['headers'];
   if (!$headers)
-    return false;
+    return false; 
   if ($headers[strtolower(OverSkyConfiguration::HTTPHeaderVersion)] != OverSkyConfiguration::Version)
     return false;
   if (!isValidHashHexString($headers[strtolower(OverSkyConfiguration::HTTPHeaderHostID)]))
