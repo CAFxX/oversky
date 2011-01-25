@@ -9,9 +9,10 @@ All files of the oversky repository are covered by the GPLv3 license.
 
 ## Installation
 To run oversky you'll need:
-* a working Apache installation
-* PHP 5 (with the mcrypt and PDO modules) 
-* a working databse with the relative PDO driver
+
+*   a working Apache installation
+*   PHP 5 (with the mcrypt and PDO modules) 
+*   a working databse with the relative PDO driver
 
 The first step is configure your oversky instance: to do so, open `oversky.configuration.phpi.template`
 and fill in all the settings (see the comments in the file for information). Save the modified file as
