@@ -9,10 +9,17 @@ class database {
   private $stmts = array();
   
   private function __construct() {
-    $this->pdo = new PDO( OverSkyConfiguration::PDODSN, OverSkyConfiguration::PDOUser, OverSkyConfiguration::PDOPassword );
+    $this->pdo = new PDO( 
+      OverSkyConfiguration::PDODSN, 
+      OverSkyConfiguration::PDOUser, 
+      OverSkyConfiguration::PDOPassword,
+      array(
+        PDO::ATTR_PERSISTENT  => true, 
+        PDO::ATTR_ERRMODE     => PDO::ERRMODE_EXCEPTION
+      )
+    );
     if (!$this->pdo)
       throw new DatabaseUnavailable();
-    $this->pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
   }
   
   static function getInstance() {
