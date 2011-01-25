@@ -1,8 +1,0 @@
-Options -Indexes
-
-<Files ~ "\.phpi$">
-	Order allow,deny
-	Deny from all
-	Satisfy all
-</Files>
-

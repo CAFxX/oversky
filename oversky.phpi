@@ -155,10 +155,6 @@ function handleOverskyHost() {
   if (!OverSkyConfiguration::HostID()) 
     return false;
 
-  header(OverSkyConfiguration::HTTPHeaderVersion  .': '. OverSkyConfiguration::Version);
-  header(OverSkyConfiguration::HTTPHeaderHost     .': '. OverSkyConfiguration::HostName);
-  header(OverSkyConfiguration::HTTPHeaderHostID   .': '. OverSkyConfiguration::HostID());
-
   if (!$headers = getRequestHeaders())
     throw new ServerError();
 

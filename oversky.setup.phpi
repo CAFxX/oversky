@@ -33,6 +33,23 @@ function setup_directories() {
   if (!file_put_contents(OverSkyConfiguration::WorkingDirectoryPrivate.'/HostID', $host_id)) // FIXME
     throw new ConfigurationError();
   hostsDirectory::put_(OverSkyConfiguration::HostName, $host_id);
+  
+  if (!file_put_contents('.htaccess', '
+    # oversky
+    # .htaccess configuration
+    # This file is automatically created by the oversky setup
+    # DO NOT MODIFY BY HAND!
+    Options -Indexes
+    Header add '.OverSkyConfiguration::HTTPHeaderVersion.' '.OverSkyConfiguration::Version.'
+    Header add '.OverSkyConfiguration::HTTPHeaderHost.' '.OverSkyConfiguration::HostName.'
+    Header add '.OverSkyConfiguration::HTTPHeaderHostID.' '.$host_id.'
+    <Files ~ "\.phpi$">
+      Order allow,deny
+      Deny from all
+      Satisfy all
+    </Files>'))
+    throw new ConfigurationError();
+    
 }
 
 function setup_database() {
