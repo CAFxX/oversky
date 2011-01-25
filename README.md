@@ -19,3 +19,19 @@ and fill in the needed informations.
 When done, request `oversky.php?action=setup` from your browser. If no 
 error is reported and you're redirected to the welcome page you 
 should now have a working oversky instance.
+
+## Bootstrapping
+Once you have a working instance, you need to connect it to the oversky 
+DHT. Until autodiscovery is implemented, you'll need to find another 
+instance that is already connected to the oversky DHT. Then, by 
+requesting `oversky.php?action=hostdiscovery&host=<URL of instance>` that
+instance will be added to the known hosts list.
+
+## Registering files
+To add a local file or HTTP resource to the DHT, request `oversky.php?action=register&location=<file or URL>`.
+A copy of the file (or resource identified by the URL) will be created in the working private directory, and 
+the file will be uniquely identified by the SHA-256 hash of its contents.
+
+## Geting files
+To get a file you can request `oversky.php?action=get&key=<SHA-256 hash of file>` on any instance of the 
+oversky DHT.
