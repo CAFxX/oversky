@@ -138,14 +138,14 @@ function handleRegisterRequest($key, $location) {
     if ($key && $local_key != $key) 
       throw new OverSkyException('Key mismatch!');
     // add it to the local store
-    $locallocation = localStore::get_($local_key); 
+    $local_location = localStore::get_($local_key); 
     // let other nodes know that we now have a copy of the resource
-    hostsDirectory::push_($local_key, $location);
+    hostsDirectory::push_($local_key, $local_location);
   } else {
     throw new InvalidLocation($location);
   }
   
-  return true;
+  return handleRedirect($local_location);
 }
 
 function handleSetupRequest() {
