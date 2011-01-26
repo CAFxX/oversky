@@ -34,7 +34,7 @@ function handleRequest() {
     case 'register':      return handleRegisterRequest();
     case 'list':        
     case 'unregister':    throw new UnimplementedAction();
-    default:              throw new InvalidAction();
+    default:              throw new InvalidAction($_REQUEST['action']);
   }
 }
 
@@ -45,14 +45,14 @@ function handleGetRequest() {
   if (!$key = $_REQUEST['key'])
     throw new MissingKey();
   if (!isValidHashHexString($key))
-    throw new InvalidKey();
+    throw new InvalidKey($key);
   
   $location = getLocationForKey($key); 
   
   requestsLog::log_(getIPv6($_SERVER['REMOTE_ADDR']), $key, $location);
     
   if (!$location)
-    throw new UnknownKey();
+    throw new UnknownKey($key);
     
   return handleRedirect($location);
 }
@@ -74,16 +74,16 @@ function handlePutRequest() {
   if (!$key = $_REQUEST['key'])
     throw new MissingKey();
   if (!isValidHashHexString($key))
-    throw new InvalidKey();
+    throw new InvalidKey($key);
     
   if (!$location = $_REQUEST['location'])
     throw new MissingLocation();
   if (!isValidLocationString($location))
-    throw new InvalidLocation();
+    throw new InvalidLocation($location);
   if (!$location_host = parse_url($location, PHP_URL_HOST))
-    throw new InvalidLocation();
+    throw new InvalidLocation($location);
   if (!$location_host_ip = gethostbyname($location_host))
-    throw new InvalidLocation();
+    throw new InvalidLocation($location);
   
   if (!$headers = getRequestHeaders())
     throw new ServerError();
@@ -91,9 +91,9 @@ function handlePutRequest() {
   if (!$host = $headers[OverSkyConfiguration::HTTPHeaderHost])
     throw new MissingHost();
   if (!$header_host = parse_url($host, PHP_URL_HOST))
-    throw new InvalidHost();
+    throw new InvalidHost($host);
   if (!$header_host_ip = gethostbyname($header_host))
-    throw new InvalidHost();
+    throw new InvalidHost($host);
   
   if (!$location_host_ip || $location_host_ip != $_SERVER['REMOTE_ADDR'] || $location_host_ip != $header_host_ip)
     throw new InvalidThirdPartyPut();
@@ -101,7 +101,7 @@ function handlePutRequest() {
   if (!$host_id = $headers[OverSkyConfiguration::HTTPHeaderHostID])
     throw new MissingHostID();
   if (!isValidHashHexString($host_id))
-    throw new InvalidHostID();
+    throw new InvalidHostID($host_id);
   
   remoteStore::put_($key, $location);
   
@@ -110,7 +110,7 @@ function handlePutRequest() {
 
 function handleDiscoverHostRequest() {
   if (!$host = $_REQUEST['host'])
-    throw new BadRequest();
+    throw new MissingHost();
   
   if (!$host_id = getOverskyHostID($host)) 
     throw new FailedHostDiscovery($host_id);
@@ -121,19 +121,33 @@ function handleDiscoverHostRequest() {
 }
 
 function handleRegisterRequest() {
-  if (!$location = $_REQUEST['location'])
-    throw new MissingLocation();
+  $location = $_REQUEST['location'];
+  $key = $_REQUEST['key'];
   
-  if (/*(is_file($location) && is_readable($location)) ||*/ isValidLocationString($location)) {
-    $key = localStore::putFile_($location); 
-    $location = localStore::get_($key); 
-    hostsDirectory::push_($key, $location);
-  } elseif (isValidHashHexString($location)) {
-    //$location = getLocationForKey($location);
-    throw new ServerError(); // TODO
+  // we need either a location or a key
+  if ((!!$location) == (!!$key)) 
+    throw new MalformedRequest();
+  
+  // if we got a key, find a location where we can get it from
+  if ($key && isValidHashHexString($key))
+    if (!$location = getLocationForKey($key))
+      throw new UnknownKey($key);
+  
+  if (isValidLocationString($location)) {
+    // get a copy of the resource
+    $local_key = localStore::putFile_($location);
+    // if we were given a key, ensure that the hashes match
+    if ($local_key != $key)
+      throw new OverSkyException('Key mismatch!');
+    // add it to the local store
+    $locallocation = localStore::get_($local_key); 
+    // let other nodes know that we now have a copy of the resource
+    hostsDirectory::push_($local_key, $location);
   } else {
-    throw new InvalidLocation();
+    throw new InvalidLocation($location);
   }
+  
+  return true;
 }
 
 function handleSetupRequest() {
@@ -159,14 +173,13 @@ function handleOverskyHost() {
     throw new ServerError();
 
   // TODO: check the version of the remote host?  
-  // header('Debug: '.serialize($headers));
 
   if (!$host = $headers[OverSkyConfiguration::HTTPHeaderHost])
     return false;
   if (!$header_host = parse_url($host, PHP_URL_HOST))
-    throw new InvalidHost();
+    throw new InvalidHost($host);
   if (!$header_host_ip = gethostbyname($header_host))
-    throw new InvalidHost();
+    throw new InvalidHost($host);
   
   if (!$header_host_ip || $_SERVER['REMOTE_ADDR'] != $header_host_ip)
     throw new BadRequest();
@@ -174,7 +187,7 @@ function handleOverskyHost() {
   if (!$host_id = $headers[OverSkyConfiguration::HTTPHeaderHostID])
     throw new MissingHostID();
   if (!isValidHashHexString($host_id))
-    throw new InvalidHostID();
+    throw new InvalidHostID($host_id);
   
   hostsDirectory::put_($host, $host_id); 
   
