@@ -20,29 +20,27 @@ function liftOff() {
 }
 
 function handleRequest() {
-  if (!checkRequestPrivileges('access')) 
-    throw new UnauthorizedRequest();
+  ensureRequestPrivileges('access');
   
   handleOverskyHost();
     
   switch ($_REQUEST['action']) {
     case false:           return handleWelcomeScreen();
-    case 'get':           return handleGetRequest();
-    case 'put':           return handlePutRequest();
+    case 'get':           return handleGetRequest($_REQUEST['key']);
+    case 'put':           return handlePutRequest($_REQUEST['key'], $_REQUEST['location']);
     case 'setup':         return handleSetupRequest();
-    case 'hostdiscovery': return handleDiscoverHostRequest();
-    case 'register':      return handleRegisterRequest();
+    case 'hostdiscovery': return handleHostDiscoveryRequest($_REQUEST['host']);
+    case 'register':      return handleRegisterRequest($_REQUEST['key'], $_REQUEST['location']);
     case 'list':        
     case 'unregister':    throw new UnimplementedAction();
     default:              throw new InvalidAction($_REQUEST['action']);
   }
 }
 
-function handleGetRequest() {
-  if (!checkRequestPrivileges('get'))
-    throw new UnauthorizedRequest();
+function handleGetRequest($key) {
+  ensureRequestPrivileges('get');
 
-  if (!$key = $_REQUEST['key'])
+  if (!$key)
     throw new MissingKey();
   if (!isValidHashHexString($key))
     throw new InvalidKey($key);
@@ -67,16 +65,15 @@ function getLocationForKey($key) {
   return hostsDirectory::get_($key);
 }
 
-function handlePutRequest() {
-  if (!checkRequestPrivileges('put'))
-    throw new UnauthorizedRequest();
+function handlePutRequest($key, $location) {
+  ensureRequestPrivileges('put');
 
-  if (!$key = $_REQUEST['key'])
+  if (!$key)
     throw new MissingKey();
   if (!isValidHashHexString($key))
     throw new InvalidKey($key);
     
-  if (!$location = $_REQUEST['location'])
+  if (!$location)
     throw new MissingLocation();
   if (!isValidLocationString($location))
     throw new InvalidLocation($location);
@@ -108,8 +105,10 @@ function handlePutRequest() {
   return true;
 }
 
-function handleDiscoverHostRequest() {
-  if (!$host = $_REQUEST['host'])
+function handleHostDiscoveryRequest($host) {
+  ensureRequestPrivileges('hostdiscovery');
+
+  if (!$host)
     throw new MissingHost();
   
   if (!$host_id = getOverskyHostID($host)) 
@@ -120,10 +119,9 @@ function handleDiscoverHostRequest() {
   return true;
 }
 
-function handleRegisterRequest() {
-  $location = $_REQUEST['location'];
-  $key = $_REQUEST['key'];
-  
+function handleRegisterRequest($key, $location) {
+  ensureRequestPrivileges('register');
+
   // we need either a location or a key
   if ((!!$location) == (!!$key)) 
     throw new MalformedRequest();
@@ -137,7 +135,7 @@ function handleRegisterRequest() {
     // get a copy of the resource
     $local_key = localStore::putFile_($location);
     // if we were given a key, ensure that the hashes match
-    if ($local_key != $key)
+    if ($key && $local_key != $key) 
       throw new OverSkyException('Key mismatch!');
     // add it to the local store
     $locallocation = localStore::get_($local_key); 
@@ -151,8 +149,7 @@ function handleRegisterRequest() {
 }
 
 function handleSetupRequest() {
-  if (!checkRequestPrivileges('setup'))
-    throw new UnauthorizedRequest();
+  ensureRequestPrivileges('setup');
   
   setup();
   handleRedirect(OverSkyConfiguration::HostName);
@@ -199,8 +196,9 @@ function handleRedirect($location) {
   return true;
 }
 
-function checkRequestPrivileges($privilege) {
-  return true;
+function ensureRequestPrivileges($privilege) {
+  if (false)
+    throw new UnauthorizedRequest();
 }
 
 ?>
